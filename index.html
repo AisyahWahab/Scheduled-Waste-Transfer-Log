@@ -8,7 +8,68 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
-  <div id="app" class="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
+
+  <!-- ======================================================================= -->
+  <!-- FULL-SCREEN ONE-TIME REGISTRATION / LOGIN PAGE                          -->
+  <!-- ======================================================================= -->
+  <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950">
+    <div class="w-full max-w-md bg-slate-900/95 border border-blue-500/30 rounded-3xl shadow-2xl p-6 sm:p-8 space-y-6">
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold uppercase tracking-wider">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          Scheduled Waste Store
+        </div>
+        <h1 class="text-2xl font-bold text-white">Operator Registration</h1>
+        <p class="text-xs text-slate-400">
+          One-time device setup. Your name, Staff ID, and department will automatically attach to every waste transfer record.
+        </p>
+      </div>
+
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label for="loginName" class="block text-xs font-medium text-slate-300 mb-1.5">Full Name</label>
+          <input id="loginName" type="text" required placeholder="e.g. Aisyah Wahab"
+            class="w-full rounded-xl bg-slate-950 border border-slate-700 focus:border-blue-500 focus:outline-none px-3.5 py-2.5 text-sm text-white" />
+        </div>
+
+        <div>
+          <label for="loginStaffId" class="block text-xs font-medium text-slate-300 mb-1.5">Staff / Employee ID</label>
+          <input id="loginStaffId" type="text" required placeholder="e.g. EMP-1042"
+            class="w-full rounded-xl bg-slate-950 border border-slate-700 focus:border-blue-500 focus:outline-none px-3.5 py-2.5 text-sm text-white uppercase" />
+        </div>
+
+        <div>
+          <label for="loginDept" class="block text-xs font-medium text-slate-300 mb-1.5">Department</label>
+          <select id="loginDept" required
+            class="w-full rounded-xl bg-slate-950 border border-slate-700 focus:border-blue-500 focus:outline-none px-3.5 py-2.5 text-sm text-white">
+            <option value="" disabled selected>-- Select Your Department --</option>
+            <option value="Foundry / Melting">Foundry / Melting</option>
+            <option value="Moulding">Moulding</option>
+            <option value="Grinding / Finishing">Grinding / Finishing</option>
+            <option value="Quality / Lab">Quality / Lab</option>
+            <option value="Maintenance">Maintenance</option>
+            <option value="Warehouse / Store">Warehouse / Store</option>
+            <option value="EHS / Environmental">EHS / Environmental</option>
+          </select>
+        </div>
+
+        <button type="submit"
+          class="w-full py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white shadow-lg transition">
+          Save Profile & Enter Store
+        </button>
+      </form>
+
+      <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+        <span>Cloud Sync: Supabase</span>
+        <span>Clearance: Admin PIN Protected</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- MAIN SCHEDULED WASTE STORE DASHBOARD                                    -->
+  <!-- ======================================================================= -->
+  <div id="dashboardScreen" class="hidden max-w-6xl mx-auto p-4 md:p-8 space-y-6">
     <!-- Header -->
     <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-slate-900 border border-blue-500/30 rounded-2xl p-5">
       <div>
@@ -16,16 +77,19 @@
           Cloud Sync • Supabase
         </span>
         <h1 class="text-2xl font-bold text-white mt-2">Scheduled Waste Store</h1>
-        <p class="text-sm text-slate-400">Real-time balance tracker (Total Intake − Total Outward Clearance)</p>
+        <p class="text-sm text-slate-400">Live net inventory (Total Intake − Total Outward Clearance)</p>
       </div>
+
       <div class="flex flex-wrap items-center gap-3">
-        <div id="userBadge" class="text-xs bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-300">
+        <div id="userBadge" class="text-xs bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-slate-200">
           Not signed in
         </div>
-        <button id="switchUserBtn" class="px-3.5 py-2 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white transition">
-          Switch User / Setup
+        <button id="switchUserBtn" type="button"
+          class="px-3.5 py-2 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white transition">
+          Switch User
         </button>
-        <button id="refreshBtn" class="px-3.5 py-2 rounded-xl text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition">
+        <button id="refreshBtn" type="button"
+          class="px-3.5 py-2 rounded-xl text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition">
           Sync Now
         </button>
       </div>
@@ -43,7 +107,7 @@
       <form id="intakeForm" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold text-emerald-400">Log Waste Intake (Inward)</h2>
-          <span class="text-xs text-slate-400">Adds to balance</span>
+          <span class="text-xs text-slate-400">Adds to store balance</span>
         </div>
 
         <div>
@@ -70,8 +134,8 @@
         </div>
 
         <div>
-          <label class="block text-xs text-slate-400 mb-1">Notes / Reference</label>
-          <input id="intakeNotes" type="text" placeholder="Optional consignment or batch note"
+          <label class="block text-xs text-slate-400 mb-1">Notes / Batch Reference</label>
+          <input id="intakeNotes" type="text" placeholder="Optional bin / drum / batch note"
             class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2.5 text-sm text-white" />
         </div>
 
@@ -106,14 +170,14 @@
           </div>
           <div>
             <label class="block text-xs text-slate-400 mb-1">Admin PIN</label>
-            <input id="adminPin" type="password" required placeholder="Enter PIN (default: 1234)"
+            <input id="adminPin" type="password" required placeholder="Enter PIN"
               class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2.5 text-sm text-white" />
           </div>
         </div>
 
         <div>
-          <label class="block text-xs text-slate-400 mb-1">Disposal / Manifest Notes</label>
-          <input id="clearanceNotes" type="text" placeholder="e.g. Consignment note / contractor"
+          <label class="block text-xs text-slate-400 mb-1">Disposal / Consignment Notes</label>
+          <input id="clearanceNotes" type="text" placeholder="e.g. eSWIS consignment / contractor"
             class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2.5 text-sm text-white" />
         </div>
 
@@ -140,12 +204,12 @@
         <table class="w-full text-left border-collapse text-sm">
           <thead>
             <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase">
-              <th class="py-2.5 px-3">Time</th>
+              <th class="py-2.5 px-3">Date & Time</th>
               <th class="py-2.5 px-3">Action</th>
               <th class="py-2.5 px-3">Material</th>
-              <th class="py-2.5 px-3">Amount (MT)</th>
+              <th class="py-2.5 px-3">Weight (MT)</th>
               <th class="py-2.5 px-3">Department</th>
-              <th class="py-2.5 px-3">User</th>
+              <th class="py-2.5 px-3">Operator (ID)</th>
               <th class="py-2.5 px-3">Notes</th>
             </tr>
           </thead>
@@ -153,31 +217,6 @@
         </table>
       </div>
     </section>
-  </div>
-
-  <!-- One-Time User Setup Modal -->
-  <div id="setupModal" class="fixed inset-0 bg-black/75 hidden items-center justify-center p-4 z-50">
-    <div class="bg-slate-900 border border-blue-500/40 rounded-2xl max-w-md w-full p-6 space-y-4">
-      <h3 class="text-xl font-bold text-white">User & Department Setup</h3>
-      <p class="text-xs text-slate-400">Saved on this device so your department is automatically attached to every log.</p>
-
-      <div>
-        <label class="block text-xs text-slate-400 mb-1">Your Name</label>
-        <input id="setupName" type="text" placeholder="e.g. Amirul"
-          class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white" />
-      </div>
-
-      <div>
-        <label class="block text-xs text-slate-400 mb-1">Department</label>
-        <input id="setupDept" type="text" placeholder="e.g. Foundry / Moulding / QC"
-          class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white" />
-      </div>
-
-      <div class="flex justify-end gap-2 pt-2">
-        <button id="cancelSetupBtn" class="px-4 py-2 rounded-xl text-sm bg-slate-800 text-slate-300">Cancel</button>
-        <button id="saveSetupBtn" class="px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white">Save Profile</button>
-      </div>
-    </div>
   </div>
 
   <script>
@@ -195,14 +234,14 @@
       "Chemicals-SW325"
     ];
 
-    const USER_KEY = "sws_user_profile_v1";
+    const USER_KEY = "sws_user_profile_v2";
     let sbClient = null;
     let logs = [];
 
     function initSupabase() {
       if (
         !SUPABASE_URL.startsWith("https://lfljgzqbsvkejpmngxop.supabase.co/rest/v1/") ||
-        SUPABASE_URL.includes("https://lfljgzqbsvkejpmngxop.supabase.co/rest/v1/") ||
+        SUPABASE_URL.includes("PASTE YOUR") ||
         SUPABASE_ANON_KEY.includes("sb_publishable_YLo3oAou-ifP4oDxjFQRMg_hWrU7-7J")
       ) {
         showBanner("Add your Supabase URL and Anon Key in index.html to enable live cloud sync.", "warn");
@@ -214,7 +253,12 @@
 
     function showBanner(msg, type = "info") {
       const banner = document.getElementById("statusBanner");
-      banner.classList.remove("hidden", "bg-emerald-950/70", "border-emerald-500/40", "text-emerald-200", "bg-amber-950/70", "border-amber-500/40", "text-amber-200", "bg-rose-950/70", "border-rose-500/40", "text-rose-200");
+      banner.classList.remove(
+        "hidden",
+        "bg-emerald-950/70", "border-emerald-500/40", "text-emerald-200",
+        "bg-amber-950/70", "border-amber-500/40", "text-amber-200",
+        "bg-rose-950/70", "border-rose-500/40", "text-rose-200"
+      );
       if (type === "ok") {
         banner.classList.add("bg-emerald-950/70", "border-emerald-500/40", "text-emerald-200");
       } else if (type === "err") {
@@ -235,20 +279,29 @@
 
     function setUser(profile) {
       localStorage.setItem(USER_KEY, JSON.stringify(profile));
-      renderUser();
     }
 
-    function renderUser() {
-      const user = getUser();
-      const badge = document.getElementById("userBadge");
-      const deptInput = document.getElementById("intakeDept");
-      if (user && user.name && user.department) {
-        badge.textContent = `${user.name} • ${user.department}`;
-        deptInput.value = user.department;
-      } else {
-        badge.textContent = "Setup required";
-        deptInput.value = "";
+    function showLoginScreen(prefill = true) {
+      const u = getUser();
+      if (prefill && u) {
+        document.getElementById("loginName").value = u.name || "";
+        document.getElementById("loginStaffId").value = u.staffId || "";
+        document.getElementById("loginDept").value = u.department || "";
       }
+      document.getElementById("dashboardScreen").classList.add("hidden");
+      document.getElementById("loginScreen").classList.remove("hidden");
+    }
+
+    function showDashboardScreen() {
+      const user = getUser();
+      if (!user || !user.name || !user.staffId || !user.department) {
+        showLoginScreen(false);
+        return;
+      }
+      document.getElementById("userBadge").textContent = `${user.name} (${user.staffId}) • ${user.department}`;
+      document.getElementById("intakeDept").value = user.department;
+      document.getElementById("loginScreen").classList.add("hidden");
+      document.getElementById("dashboardScreen").classList.remove("hidden");
     }
 
     function computeBalances() {
@@ -339,122 +392,4 @@
 
     async function insertLog(entry) {
       if (!sbClient) {
-        showBanner("Supabase is not configured yet. Add your URL and Anon Key first.", "warn");
-        return;
-      }
-      const { error } = await sbClient.from("waste_logs").insert([entry]);
-      if (error) {
-        showBanner("Save failed: " + error.message, "err");
-        return;
-      }
-      showBanner("Record saved to Supabase.", "ok");
-      await fetchLogs();
-    }
-
-    // Modal controls
-    const modal = document.getElementById("setupModal");
-    function openModal() {
-      const u = getUser() || {};
-      document.getElementById("setupName").value = u.name || "";
-      document.getElementById("setupDept").value = u.department || "";
-      modal.classList.remove("hidden");
-      modal.classList.add("flex");
-    }
-    function closeModal() {
-      modal.classList.add("hidden");
-      modal.classList.remove("flex");
-    }
-
-    document.getElementById("switchUserBtn").addEventListener("click", openModal);
-    document.getElementById("cancelSetupBtn").addEventListener("click", closeModal);
-    document.getElementById("saveSetupBtn").addEventListener("click", () => {
-      const name = document.getElementById("setupName").value.trim();
-      const department = document.getElementById("setupDept").value.trim();
-      if (!name || !department) return;
-      setUser({ name, department });
-      closeModal();
-    });
-
-    document.getElementById("intakeForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const user = getUser();
-      if (!user?.name || !user?.department) {
-        openModal();
-        return;
-      }
-      const material = document.getElementById("intakeMaterial").value;
-      const weight = Number(document.getElementById("intakeWeight").value);
-      const notes = document.getElementById("intakeNotes").value.trim();
-      if (!weight || weight <= 0) return;
-
-      await insertLog({
-        id: "log_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-        created_at: new Date().toISOString(),
-        type: "intake",
-        material,
-        weight,
-        department: user.department,
-        logged_by: user.name,
-        notes
-      });
-      e.target.reset();
-      renderUser();
-    });
-
-    document.getElementById("clearanceForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const user = getUser();
-      if (!user?.name || !user?.department) {
-        openModal();
-        return;
-      }
-      const pin = document.getElementById("adminPin").value.trim();
-      if (pin !== ADMIN_CLEARANCE_PIN) {
-        showBanner("Invalid Admin PIN.", "err");
-        return;
-      }
-
-      const material = document.getElementById("clearanceMaterial").value;
-      const weight = Number(document.getElementById("clearanceWeight").value);
-      const notes = document.getElementById("clearanceNotes").value.trim();
-      const avail = computeBalances()[material]?.balance ?? 0;
-
-      if (!weight || weight <= 0) return;
-      if (weight > avail) {
-        showBanner(`Cannot clear ${weight.toFixed(2)} MT — only ${avail.toFixed(2)} MT available for ${material}.`, "err");
-        return;
-      }
-
-      await insertLog({
-        id: "clr_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-        created_at: new Date().toISOString(),
-        type: "clearance",
-        material,
-        weight,
-        department: user.department,
-        logged_by: user.name,
-        notes
-      });
-      e.target.reset();
-      updateAvailableStockLabel();
-    });
-
-    document.getElementById("clearanceMaterial").addEventListener("change", () => updateAvailableStockLabel());
-    document.getElementById("filterMaterial").addEventListener("change", renderLogs);
-    document.getElementById("refreshBtn").addEventListener("click", fetchLogs);
-
-    // Boot
-    renderUser();
-    renderBalances();
-    renderLogs();
-    if (!getUser()) openModal();
-    if (initSupabase()) {
-      fetchLogs();
-      sbClient
-        .channel("waste_logs_changes")
-        .on("postgres_changes", { event: "*", schema: "public", table: "waste_logs" }, () => fetchLogs())
-        .subscribe();
-    }
-  </script>
-</body>
-</html>
+        showBanner("Supabase is not configured yet. Add your URL and
