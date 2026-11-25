@@ -56,6 +56,14 @@
           </select>
         </div>
 
+        <div id="loginAdminPinBox" class="hidden">
+          <label for="loginAdminPin" class="block text-xs font-medium text-amber-300 mb-1.5">Admin Password / PIN</label>
+          <input id="loginAdminPin" type="password" placeholder="Enter Admin PIN"
+            class="w-full rounded-xl bg-slate-950 border border-amber-500/50 focus:border-amber-400 focus:outline-none px-3.5 py-2.5 text-sm text-white" />
+        </div>
+
+        <p id="loginError" class="hidden text-xs text-rose-400"></p>
+
         <button type="submit"
           class="w-full py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white shadow-lg transition">
           Save Profile & Enter Store
@@ -73,7 +81,6 @@
   <!-- MAIN SCHEDULED WASTE STORE DASHBOARD                                    -->
   <!-- ======================================================================= -->
   <div id="dashboardScreen" class="hidden max-w-6xl mx-auto p-4 md:p-8 space-y-6">
-    <!-- Header -->
     <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-slate-900 border border-blue-500/30 rounded-2xl p-5">
       <div>
         <span class="inline-block text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
@@ -98,15 +105,11 @@
       </div>
     </header>
 
-    <!-- Status Banner -->
     <div id="statusBanner" class="hidden rounded-xl px-4 py-3 text-sm border"></div>
 
-    <!-- Balance Cards -->
     <section id="balanceGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></section>
 
-    <!-- Forms Grid -->
     <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Inward Intake Form -->
       <form id="intakeForm" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold text-emerald-400">Log Waste Intake (Inward)</h2>
@@ -147,7 +150,6 @@
         </button>
       </form>
 
-      <!-- Outward Clearance Form (Admin PIN Required) -->
       <form id="clearanceForm" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold text-blue-400">Waste Clearance (Outward)</h2>
@@ -184,5 +186,378 @@
             class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2.5 text-sm text-white" />
         </div>
 
-        <button type="submit" class="w-full py-2.5 rounded-xl font-semibold text-sm bg-blue-600 hover:bg-blue-500 text-white
-          </html>
+        <button type="submit" class="w-full py-2.5 rounded-xl font-semibold text-sm bg-blue-600 hover:bg-blue-500 text-white transition">
+          Authorize & Clear Waste
+        </button>
+      </form>
+    </section>
+
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h2 class="text-lg font-semibold text-white">Recent Transfer & Clearance Logs</h2>
+        <select id="filterMaterial" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-1.5 text-sm text-slate-200">
+          <option value="ALL">All Materials</option>
+          <option value="Sand and Dust-SW104">Sand and Dust-SW104</option>
+          <option value="Paint-SW415">Paint-SW415</option>
+          <option value="Dross-SW104">Dross-SW104</option>
+          <option value="Chemicals-SW325">Chemicals-SW325</option>
+        </select>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase">
+              <th class="py-2.5 px-3">Date & Time</th>
+              <th class="py-2.5 px-3">Action</th>
+              <th class="py-2.5 px-3">Material</th>
+              <th class="py-2.5 px-3">Weight (MT)</th>
+              <th class="py-2.5 px-3">Department</th>
+              <th class="py-2.5 px-3">Operator (ID)</th>
+              <th class="py-2.5 px-3">Notes</th>
+            </tr>
+          </thead>
+          <tbody id="logsBody" class="divide-y divide-slate-800/70"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://lfljgzqbsvkejpmngxop.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_YLo3oAou-ifP4oDxjFQRMg_hWrU7-7J";
+    const ADMIN_CLEARANCE_PIN = "1234";
+
+    const MATERIALS = [
+      "Sand and Dust-SW104",
+      "Paint-SW415",
+      "Dross-SW104",
+      "Chemicals-SW325"
+    ];
+
+    const USER_KEY = "sws_user_profile_v2";
+    let sbClient = null;
+    let logs = [];
+    let sessionUser = null;
+
+    function initSupabase() {
+      try {
+        if (!window.supabase || !SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
+        sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        return true;
+      } catch (err) {
+        console.warn("Supabase init error:", err);
+        return false;
+      }
+    }
+
+    function showBanner(msg, type = "info") {
+      const banner = document.getElementById("statusBanner");
+      banner.classList.remove(
+        "hidden",
+        "bg-emerald-950/70", "border-emerald-500/40", "text-emerald-200",
+        "bg-amber-950/70", "border-amber-500/40", "text-amber-200",
+        "bg-rose-950/70", "border-rose-500/40", "text-rose-200"
+      );
+      if (type === "ok") {
+        banner.classList.add("bg-emerald-950/70", "border-emerald-500/40", "text-emerald-200");
+      } else if (type === "err") {
+        banner.classList.add("bg-rose-950/70", "border-rose-500/40", "text-rose-200");
+      } else {
+        banner.classList.add("bg-amber-950/70", "border-amber-500/40", "text-amber-200");
+      }
+      banner.textContent = msg;
+    }
+
+    function setLoginError(msg) {
+      const el = document.getElementById("loginError");
+      if (!msg) {
+        el.textContent = "";
+        el.classList.add("hidden");
+      } else {
+        el.textContent = msg;
+        el.classList.remove("hidden");
+      }
+    }
+
+    function getUser() {
+      try {
+        const raw = localStorage.getItem(USER_KEY);
+        if (raw) {
+          sessionUser = JSON.parse(raw);
+          return sessionUser;
+        }
+      } catch (err) {
+        console.warn("Storage read fallback:", err);
+      }
+      return sessionUser;
+    }
+
+    function setUser(profile) {
+      sessionUser = profile;
+      try {
+        localStorage.setItem(USER_KEY, JSON.stringify(profile));
+      } catch (err) {
+        console.warn("Storage write fallback:", err);
+      }
+    }
+
+    function toggleAdminPinField(deptValue) {
+      const pinBox = document.getElementById("loginAdminPinBox");
+      const pinInput = document.getElementById("loginAdminPin");
+      if (deptValue === "Admin") {
+        pinBox.classList.remove("hidden");
+        pinInput.required = true;
+      } else {
+        pinBox.classList.add("hidden");
+        pinInput.required = false;
+        pinInput.value = "";
+      }
+    }
+
+    function showLoginScreen(prefill = true) {
+      const u = getUser();
+      setLoginError("");
+      if (prefill && u) {
+        document.getElementById("loginName").value = u.name || "";
+        document.getElementById("loginStaffId").value = u.staffId || "";
+        document.getElementById("loginDept").value = u.department || "";
+        toggleAdminPinField(u.department || "");
+      } else {
+        toggleAdminPinField(document.getElementById("loginDept").value);
+      }
+      document.getElementById("dashboardScreen").classList.add("hidden");
+      document.getElementById("loginScreen").classList.remove("hidden");
+    }
+
+    function showDashboardScreen() {
+      const user = getUser();
+      if (!user || !user.name || !user.staffId || !user.department) {
+        showLoginScreen(false);
+        return;
+      }
+      document.getElementById("userBadge").textContent = `${user.name} (${user.staffId}) • ${user.department}`;
+      document.getElementById("intakeDept").value = user.department;
+      document.getElementById("loginScreen").classList.add("hidden");
+      document.getElementById("dashboardScreen").classList.remove("hidden");
+    }
+
+    function computeBalances() {
+      const map = {};
+      MATERIALS.forEach((m) => {
+        map[m] = { intake: 0, clearance: 0, balance: 0 };
+      });
+      logs.forEach((row) => {
+        if (!map[row.material]) return;
+        const w = Number(row.weight) || 0;
+        if (row.type === "intake") map[row.material].intake += w;
+        if (row.type === "clearance") map[row.material].clearance += w;
+      });
+      MATERIALS.forEach((m) => {
+        map[m].balance = Number((map[m].intake - map[m].clearance).toFixed(2));
+      });
+      return map;
+    }
+
+    function renderBalances() {
+      const balances = computeBalances();
+      const grid = document.getElementById("balanceGrid");
+      grid.innerHTML = MATERIALS.map((mat) => {
+        const b = balances[mat];
+        return `
+          <div class="bg-slate-900 border border-slate-800 hover:border-blue-500/40 rounded-2xl p-4 transition">
+            <p class="text-xs font-medium text-blue-400 truncate">${mat}</p>
+            <p class="text-2xl font-bold text-emerald-400 mt-1">${b.balance.toFixed(2)} <span class="text-xs font-normal text-slate-400">MT</span></p>
+            <p class="text-[11px] text-slate-400 mt-2">In: ${b.intake.toFixed(2)} • Out: ${b.clearance.toFixed(2)}</p>
+          </div>
+        `;
+      }).join("");
+
+      updateAvailableStockLabel(balances);
+    }
+
+    function updateAvailableStockLabel(balances = computeBalances()) {
+      const mat = document.getElementById("clearanceMaterial").value;
+      const avail = balances[mat]?.balance ?? 0;
+      document.getElementById("availableStockText").textContent = `Available balance: ${avail.toFixed(2)} MT`;
+    }
+
+    function renderLogs() {
+      const filter = document.getElementById("filterMaterial").value;
+      const filtered = filter === "ALL" ? logs : logs.filter((r) => r.material === filter);
+      const tbody = document.getElementById("logsBody");
+
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-500">No waste records found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.slice(0, 50).map((r) => {
+        const isIntake = r.type === "intake";
+        const badge = isIntake
+          ? `<span class="px-2 py-0.5 rounded-full text-xs bg-emerald-500/15 text-emerald-400">Intake +</span>`
+          : `<span class="px-2 py-0.5 rounded-full text-xs bg-blue-500/15 text-blue-400">Clearance −</span>`;
+        const dt = new Date(r.created_at).toLocaleString();
+        return `
+          <tr>
+            <td class="py-2.5 px-3 text-xs text-slate-400 whitespace-nowrap">${dt}</td>
+            <td class="py-2.5 px-3">${badge}</td>
+            <td class="py-2.5 px-3 font-medium text-white">${r.material}</td>
+            <td class="py-2.5 px-3 font-semibold ${isIntake ? "text-emerald-400" : "text-blue-300"}">${Number(r.weight).toFixed(2)}</td>
+            <td class="py-2.5 px-3 text-slate-300">${r.department}</td>
+            <td class="py-2.5 px-3 text-slate-300">${r.logged_by}</td>
+            <td class="py-2.5 px-3 text-slate-400">${r.notes || "-"}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    async function fetchLogs() {
+      if (!sbClient) return;
+      const { data, error } = await sbClient
+        .from("waste_logs")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        showBanner("Failed to load logs from Supabase: " + error.message, "err");
+        return;
+      }
+      logs = data || [];
+      renderBalances();
+      renderLogs();
+    }
+
+    async function insertLog(entry) {
+      if (!sbClient) {
+        showBanner("Supabase client is not connected.", "warn");
+        return;
+      }
+      const { error } = await sbClient.from("waste_logs").insert([entry]);
+      if (error) {
+        showBanner("Save failed: " + error.message, "err");
+        return;
+      }
+      showBanner("Record saved to Supabase.", "ok");
+      await fetchLogs();
+    }
+
+    document.getElementById("loginDept").addEventListener("change", (e) => {
+      setLoginError("");
+      toggleAdminPinField(e.target.value);
+    });
+
+    document.getElementById("loginForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      setLoginError("");
+      const name = document.getElementById("loginName").value.trim();
+      const staffId = document.getElementById("loginStaffId").value.trim().toUpperCase();
+      const department = document.getElementById("loginDept").value;
+
+      if (!name || !staffId || !department) {
+        setLoginError("Please enter your Full Name, Staff ID, and select a Department.");
+        return;
+      }
+
+      if (department === "Admin") {
+        const pin = document.getElementById("loginAdminPin").value.trim();
+        if (pin !== ADMIN_CLEARANCE_PIN) {
+          setLoginError("Invalid Admin PIN for Admin department.");
+          return;
+        }
+      }
+
+      setUser({ name, staffId, department });
+      showDashboardScreen();
+    });
+
+    document.getElementById("switchUserBtn").addEventListener("click", () => {
+      showLoginScreen(true);
+    });
+
+    document.getElementById("intakeForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const user = getUser();
+      if (!user?.name || !user?.staffId || !user?.department) {
+        showLoginScreen(false);
+        return;
+      }
+      const material = document.getElementById("intakeMaterial").value;
+      const weight = Number(document.getElementById("intakeWeight").value);
+      const notes = document.getElementById("intakeNotes").value.trim();
+      if (!weight || weight <= 0) return;
+
+      await insertLog({
+        id: "log_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+        created_at: new Date().toISOString(),
+        type: "intake",
+        material,
+        weight,
+        department: user.department,
+        logged_by: `${user.name} (${user.staffId})`,
+        notes
+      });
+      e.target.reset();
+      document.getElementById("intakeDept").value = user.department;
+    });
+
+    document.getElementById("clearanceForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const user = getUser();
+      if (!user?.name || !user?.staffId || !user?.department) {
+        showLoginScreen(false);
+        return;
+      }
+      const pin = document.getElementById("adminPin").value.trim();
+      if (pin !== ADMIN_CLEARANCE_PIN) {
+        showBanner("Invalid Admin PIN.", "err");
+        return;
+      }
+
+      const material = document.getElementById("clearanceMaterial").value;
+      const weight = Number(document.getElementById("clearanceWeight").value);
+      const notes = document.getElementById("clearanceNotes").value.trim();
+      const avail = computeBalances()[material]?.balance ?? 0;
+
+      if (!weight || weight <= 0) return;
+      if (weight > avail) {
+        showBanner(`Cannot clear ${weight.toFixed(2)} MT — only ${avail.toFixed(2)} MT available for ${material}.`, "err");
+        return;
+      }
+
+      await insertLog({
+        id: "clr_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+        created_at: new Date().toISOString(),
+        type: "clearance",
+        material,
+        weight,
+        department: user.department,
+        logged_by: `${user.name} (${user.staffId})`,
+        notes
+      });
+      e.target.reset();
+      updateAvailableStockLabel();
+    });
+
+    document.getElementById("clearanceMaterial").addEventListener("change", () => updateAvailableStockLabel());
+    document.getElementById("filterMaterial").addEventListener("change", renderLogs);
+    document.getElementById("refreshBtn").addEventListener("click", fetchLogs);
+
+    renderBalances();
+    renderLogs();
+    if (getUser()) {
+      showDashboardScreen();
+    } else {
+      showLoginScreen(false);
+    }
+
+    if (initSupabase()) {
+      fetchLogs();
+      sbClient
+        .channel("waste_logs_changes")
+        .on("postgres_changes", { event: "*", schema: "public", table: "waste_logs" }, () => fetchLogs())
+        .subscribe();
+    }
+  </script>
+</body>
+</html>
